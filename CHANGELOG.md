@@ -4,6 +4,8 @@ All notable changes to Paluku are documented here. Format: [Keep a Changelog](ht
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-09-27
+
 ### Added
 - **Dictation anywhere:** hold fn, speak, release. Filler words and false starts are removed, self-corrections applied, and the text is typed where your cursor is. Double-tap for hands-free; Esc cancels.
 - **Edit by voice:** select text, hold fn and say what to change; the selection is rewritten in place.
