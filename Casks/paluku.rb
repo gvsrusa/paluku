@@ -1,6 +1,6 @@
 cask "paluku" do
-  version "1.4.2"
-  sha256 "110696e2cea6cae9c30ced156d25595dec9ab93f4a21e11b9397fe1b0b87109d"
+  version "1.0.0"
+  sha256 "99e91519b2e7075f6bd101c3474a49c12574d31f09c9b0f485d75abf0c88815a"
 
   url "https://github.com/gvsrusa/paluku/releases/download/v#{version}/Paluku-#{version}.dmg"
   name "Paluku"
