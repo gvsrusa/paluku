@@ -1,0 +1,60 @@
+name: Paluku
+options:
+  bundleIdPrefix: com.gvsrusa
+  deploymentTarget:
+    macOS: "15.0"
+  createIntermediateGroups: true
+packages:
+  PalukuCore:
+    path: Packages/PalukuCore
+settings:
+  base:
+    SWIFT_VERSION: "5.0"
+    MARKETING_VERSION: "0.0.0"
+    CURRENT_PROJECT_VERSION: "0"
+    CODE_SIGN_STYLE: Manual
+    CODE_SIGN_IDENTITY: "-"
+    DEVELOPMENT_TEAM: ""
+    ENABLE_HARDENED_RUNTIME: YES
+    ENABLE_APP_SANDBOX: NO
+    DEAD_CODE_STRIPPING: YES
+    ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+targets:
+  Paluku:
+    type: application
+    platform: macOS
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.gvsrusa.Paluku
+        PRODUCT_NAME: Paluku
+    sources: [App]
+    dependencies:
+      - package: PalukuCore
+    info:
+      path: App/Info.plist
+      properties:
+        CFBundleName: Paluku
+        CFBundleDisplayName: Paluku
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        LSUIElement: true
+        PalukuUpdateRepo: gvsrusa/paluku
+        NSHumanReadableCopyright: "Copyright © 2026 Venkata Subbarao Gorantla. MIT License."
+        LSMinimumSystemVersion: "15.0"
+        LSApplicationCategoryType: public.app-category.productivity
+        NSMicrophoneUsageDescription: Paluku listens while you hold the dictation or agent key.
+        NSAppleEventsUsageDescription: Paluku controls Notes, Mail, Messages and Music when you ask it to.
+        NSCalendarsFullAccessUsageDescription: Paluku reads and creates calendar events when you ask.
+        NSRemindersFullAccessUsageDescription: Paluku reads and creates reminders when you ask.
+        NSContactsUsageDescription: Paluku looks up people's emails and numbers when you ask it to message them.
+        NSLocationWhenInUseUsageDescription: Paluku finds places near you.
+        NSScreenCaptureUsageDescription: Paluku looks at the window you're pointing at when you ask about your screen.
+    entitlements:
+      path: App/Paluku.entitlements
+      properties:
+        com.apple.security.app-sandbox: false
+        com.apple.security.device.audio-input: true
+        com.apple.security.automation.apple-events: true
+        com.apple.security.personal-information.calendars: true
+        com.apple.security.personal-information.addressbook: true
+        com.apple.security.personal-information.location: true

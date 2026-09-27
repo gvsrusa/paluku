@@ -1,0 +1,119 @@
+# Tag vX.Y.Z (via scripts/release.sh) → tests → signed + notarized DMG (when secrets exist) → GitHub Release.
+# Secrets (Settings › Secrets and variables › Actions), all optional — without them an ad-hoc signed DMG is published:
+#   MACOS_CERT_P12_BASE64, MACOS_CERT_PASSWORD, DEVELOPER_ID_APPLICATION, APPLE_ID, APPLE_TEAM_ID, APPLE_APP_PASSWORD
+name: Release
+
+on:
+  push:
+    tags: ["v*.*.*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing tag to (re)build, e.g. v1.1.0
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: macos-26
+    timeout-minutes: 60
+    # Signing secrets live in the protected "release" environment (add required reviewers in repo settings).
+    environment: release
+    env:
+      TAG: ${{ github.event.inputs.tag || github.ref_name }}
+      HAS_SIGNING: ${{ secrets.MACOS_CERT_P12_BASE64 != '' }}
+      # Fallback when there's no Developer ID: our self-signed certificate (stable identity → permissions survive updates).
+      HAS_SELF_SIGN: ${{ secrets.MACOS_SELFSIGN_P12_BASE64 != '' }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ env.TAG }}
+          persist-credentials: false  # test/build run dependency code; no write token on disk
+
+      - uses: maxim-lobanov/setup-xcode@ed7a3b1fda3918c0306d1b724322adc0b8cc0a90 # v1.7.0
+        with:
+          xcode-version: latest-stable
+
+      - name: Tag must match MARKETING_VERSION
+        run: |
+          V=$(grep -oE 'MARKETING_VERSION: "[^"]+"' project.yml | cut -d'"' -f2)
+          [[ "v$V" == "$TAG" ]] || { echo "::error::tag $TAG != project.yml $V"; exit 1; }
+          echo "VERSION=$V" >> "$GITHUB_ENV"
+
+      - name: Lint + tests
+        run: scripts/lint.sh && scripts/test.sh
+
+      # Build before the signing key exists on the runner: dependency build code never sees it.
+      - name: Build Release
+        run: scripts/build.sh Release
+
+      - name: Import signing certificate (Developer ID, else self-signed)
+        if: env.HAS_SIGNING == 'true' || env.HAS_SELF_SIGN == 'true'
+        env:
+          CERT: ${{ secrets.MACOS_CERT_P12_BASE64 || secrets.MACOS_SELFSIGN_P12_BASE64 }}
+          CERT_PASSWORD: ${{ secrets.MACOS_CERT_P12_BASE64 && secrets.MACOS_CERT_PASSWORD || secrets.MACOS_SELFSIGN_PASSWORD }}
+        run: |
+          KC="$RUNNER_TEMP/build.keychain-db"; KP=$(uuidgen)
+          security create-keychain -p "$KP" "$KC"
+          security set-keychain-settings -lut 3600 "$KC"
+          security unlock-keychain -p "$KP" "$KC"
+          echo "$CERT" | base64 --decode > "$RUNNER_TEMP/cert.p12"
+          # Only codesign may use the key (not every process on the runner).
+          security import "$RUNNER_TEMP/cert.p12" -P "$CERT_PASSWORD" -x -T /usr/bin/codesign -t cert -f pkcs12 -k "$KC"
+          rm -f "$RUNNER_TEMP/cert.p12"
+          security set-key-partition-list -S codesign: -k "$KP" "$KC"
+          security list-keychains -d user -s "$KC" $(security list-keychains -d user | tr -d '"')
+
+      - name: Package (sign + notarize when configured)
+        env:
+          DEVELOPER_ID_APPLICATION: ${{ secrets.DEVELOPER_ID_APPLICATION }}
+          PALUKU_SELF_SIGN_IDENTITY: ${{ env.HAS_SELF_SIGN == 'true' && 'Paluku Self-Signed Code Signing' || '' }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          APPLE_APP_PASSWORD: ${{ secrets.APPLE_APP_PASSWORD }}
+          SKIP_BUILD: "1"
+        run: scripts/package.sh
+
+      - name: Remove signing keychain
+        if: always()
+        run: security delete-keychain "$RUNNER_TEMP/build.keychain-db" 2>/dev/null || true
+
+      - name: Release notes from CHANGELOG
+        env:
+          DEVELOPER_ID_APPLICATION: ${{ secrets.DEVELOPER_ID_APPLICATION }}
+        run: |
+          scripts/changelog-section.sh "$VERSION" > notes.md
+          if [[ -z "$DEVELOPER_ID_APPLICATION" ]]; then
+            printf '\n> **Unsigned build.** First launch: run `xattr -dr com.apple.quarantine /Applications/Paluku.app` (or System Settings › Privacy & Security › Open Anyway).\n' >> notes.md
+          fi
+          cat notes.md
+
+      - name: Publish GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # Paluku.dmg: version-less copy so releases/latest/download/Paluku.dmg (website button) always works.
+          cp "dist/Paluku-$VERSION.dmg" dist/Paluku.dmg
+          gh release create "$TAG" dist/Paluku-$VERSION.dmg dist/Paluku-$VERSION.dmg.sha256 dist/Paluku.dmg \
+            --title "Paluku $VERSION" --notes-file notes.md --verify-tag \
+          || gh release upload "$TAG" dist/Paluku-$VERSION.dmg dist/Paluku-$VERSION.dmg.sha256 dist/Paluku.dmg --clobber
+
+      - name: Update Homebrew cask on main
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          SHA=$(awk '{print $1}' "dist/Paluku-$VERSION.dmg.sha256")
+          AUTH="AUTHORIZATION: basic $(printf 'x-access-token:%s' "$GH_TOKEN" | base64)"
+          git -c http.extraheader="$AUTH" fetch -q origin main && git switch -q --detach origin/main
+          CURRENT=$(grep -oE 'version "[^"]+"' Casks/paluku.rb | cut -d'"' -f2 || true)
+          if [[ -n "$CURRENT" && "$(printf '%s\n%s\n' "$CURRENT" "$VERSION" | sort -V | tail -1)" != "$VERSION" ]]; then
+            echo "::notice::cask already at $CURRENT; not moving it back to $VERSION"; exit 0
+          fi
+          scripts/cask.sh "$VERSION" "$SHA"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -qam "chore(cask): paluku $VERSION" \
+            && git -c http.extraheader="$AUTH" push origin HEAD:main \
+            || echo "::warning::cask not pushed (unchanged or main protected); run scripts/cask.sh $VERSION $SHA"

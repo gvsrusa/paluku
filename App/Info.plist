@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CFBundleDevelopmentRegion</key>
+	<string>$(DEVELOPMENT_LANGUAGE)</string>
+	<key>CFBundleDisplayName</key>
+	<string>Paluku</string>
+	<key>CFBundleExecutable</key>
+	<string>$(EXECUTABLE_NAME)</string>
+	<key>CFBundleIdentifier</key>
+	<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+	<key>CFBundleInfoDictionaryVersion</key>
+	<string>6.0</string>
+	<key>CFBundleName</key>
+	<string>Paluku</string>
+	<key>CFBundlePackageType</key>
+	<string>APPL</string>
+	<key>CFBundleShortVersionString</key>
+	<string>$(MARKETING_VERSION)</string>
+	<key>CFBundleVersion</key>
+	<string>$(CURRENT_PROJECT_VERSION)</string>
+	<key>LSApplicationCategoryType</key>
+	<string>public.app-category.productivity</string>
+	<key>LSMinimumSystemVersion</key>
+	<string>15.0</string>
+	<key>LSUIElement</key>
+	<true/>
+	<key>NSAppleEventsUsageDescription</key>
+	<string>Paluku controls Notes, Mail, Messages and Music when you ask it to.</string>
+	<key>NSCalendarsFullAccessUsageDescription</key>
+	<string>Paluku reads and creates calendar events when you ask.</string>
+	<key>NSContactsUsageDescription</key>
+	<string>Paluku looks up people's emails and numbers when you ask it to message them.</string>
+	<key>NSHumanReadableCopyright</key>
+	<string>Copyright © 2026 Venkata Subbarao Gorantla. MIT License.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Paluku finds places near you.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Paluku listens while you hold the dictation or agent key.</string>
+	<key>NSRemindersFullAccessUsageDescription</key>
+	<string>Paluku reads and creates reminders when you ask.</string>
+	<key>NSScreenCaptureUsageDescription</key>
+	<string>Paluku looks at the window you're pointing at when you ask about your screen.</string>
+	<key>PalukuUpdateRepo</key>
+	<string>gvsrusa/paluku</string>
+</dict>
+</plist>

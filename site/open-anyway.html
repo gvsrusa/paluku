@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Open Paluku the first time</title>
+<link rel="icon" href="icon.png">
+<style>
+  :root { --bg: #fbfbfd; --surface: #fff; --text: #1d1d1f; --muted: #6e6e73; --border: #d9d9de; --accent: #0a66d8; --accent-text: #fff; color-scheme: light dark; }
+  @media (prefers-color-scheme: dark) { :root { --bg: #141416; --surface: #1c1c1f; --text: #f2f2f5; --muted: #a1a1a8; --border: #333338; --accent: #4c9bff; --accent-text: #0b0b0c; } }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 17px/1.55 -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif; }
+  main { max-width: 40rem; margin: 0 auto; padding: 3rem 1.25rem; }
+  h1 { font-size: 2rem; letter-spacing: -0.01em; margin: 0 0 0.5rem; }
+  p.sub { color: var(--muted); margin: 0 0 2rem; }
+  .btn { display: inline-block; padding: 0.7rem 1.2rem; border-radius: 8px; font-weight: 600; background: var(--accent); color: var(--accent-text); text-decoration: none; }
+  .btn:focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; }
+  ol { padding: 0; list-style: none; counter-reset: s; display: grid; gap: 0.75rem; margin: 2rem 0; }
+  li { counter-increment: s; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 0.9rem 1rem 0.9rem 3.2rem; position: relative; }
+  li::before { content: counter(s); position: absolute; left: 1rem; top: 0.9rem; width: 1.5rem; height: 1.5rem; border-radius: 50%;
+    background: var(--accent); color: var(--accent-text); font: 700 13px/1.5rem -apple-system, sans-serif; text-align: center; }
+  code { font: 14px ui-monospace, Menlo, monospace; background: var(--surface); border: 1px solid var(--border); padding: 0.1em 0.35em; border-radius: 4px; overflow-wrap: anywhere; }
+  .muted { color: var(--muted); font-size: 15px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Open Paluku the first time</h1>
+  <p class="sub">This build of Paluku isn't signed with an Apple Developer ID yet, so macOS asks you to approve it once. It takes about ten seconds.</p>
+  <a class="btn" id="open" href="x-apple.systempreferences:com.apple.settings.PrivacySecurity.extension">Open Privacy &amp; Security settings</a>
+  <ol>
+    <li>Drag <strong>Paluku</strong> to <strong>Applications</strong> (if you haven't yet), open it once, and click <strong>Done</strong> on the “Paluku” Not Opened message.</li>
+    <li>In <strong>System Settings › Privacy &amp; Security</strong>, scroll down to <em>Security</em>. Next to “Paluku” was blocked to protect your Mac, click <strong>Open Anyway</strong>.</li>
+    <li>Confirm with your password or Touch ID, then click <strong>Open Anyway</strong> once more. From now on Paluku opens normally.</li>
+  </ol>
+  <p class="muted">Prefer Terminal? <code>xattr -dr com.apple.quarantine /Applications/Paluku.app</code> does the same thing.</p>
+  <p class="muted">Why: Apple only trusts apps without a warning when the developer pays for a Developer ID and Apple notarizes each release. You can <a href="https://github.com/sponsors/gvsrusa">sponsor Paluku</a> to help cover that. The source is <a href="https://github.com/gvsrusa/paluku">on GitHub</a>, and every release lists its SHA-256.</p>
+</main>
+<script>
+  // Opened from the DMG: jump straight to the settings pane (the browser asks once). The button above is the fallback.
+  if (new URLSearchParams(location.search).has("auto")) location.href = document.getElementById("open").href;
+</script>
+</body>
+</html>

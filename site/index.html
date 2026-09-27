@@ -1,0 +1,421 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Paluku — a local voice assistant for the Mac</title>
+<meta name="description" content="Dictate, edit and act by voice on macOS with free, open-source models that run on your Mac. No cloud, no subscription.">
+<meta property="og:title" content="Paluku — a local voice assistant for the Mac">
+<meta property="og:description" content="Hold fn to dictate. Hold Right ⌥ to ask. Everything runs on your Mac with open models.">
+<meta property="og:image" content="screenshots/agent-confirm.png">
+<link rel="icon" href="icon.png">
+<style>
+  :root {
+    --bg: #fbfbfd; --surface: #ffffff; --surface-2: #f2f2f5; --text: #1d1d1f; --muted: #6e6e73;
+    --border: #d9d9de; --accent: #0a66d8; --accent-text: #ffffff; --code-bg: #f2f2f5;
+    color-scheme: light dark;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #141416; --surface: #1c1c1f; --surface-2: #232327; --text: #f2f2f5; --muted: #a1a1a8;
+      --border: #333338; --accent: #4c9bff; --accent-text: #0b0b0c; --code-bg: #232327; }
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+    font: 17px/1.55 -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Arial, sans-serif; }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  a:focus-visible, button:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
+  img { max-width: 100%; height: auto; display: block; }
+  code, pre { font: 14px/1.5 ui-monospace, "SF Mono", Menlo, monospace; }
+  code { background: var(--code-bg); padding: 0.1em 0.35em; border-radius: 4px; }
+  pre { background: var(--code-bg); padding: 1rem; border-radius: 8px; overflow-x: auto; }
+  pre code { background: none; padding: 0; overflow-wrap: normal; }
+  p code, li code, td code { overflow-wrap: anywhere; }
+  .hero > *, .split > *, .grid2 > *, .modes > * { min-width: 0; }
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 0 1.25rem; }
+  .skip { position: absolute; left: -999px; }
+  .skip:focus { left: 1rem; top: 1rem; background: var(--surface); padding: 0.5rem 1rem; z-index: 10; }
+
+  header.top { position: sticky; top: 0; z-index: 5; background: color-mix(in srgb, var(--bg) 85%, transparent);
+    backdrop-filter: saturate(180%) blur(12px); border-bottom: 1px solid var(--border); }
+  header.top .wrap { display: flex; align-items: center; gap: 1.5rem; height: 52px; }
+  .brand { font-weight: 650; color: var(--text); display: flex; align-items: center; gap: 0.5rem; }
+  .brand img { width: 24px; height: 24px; }
+  nav { display: flex; gap: 1.1rem; font-size: 14px; overflow-x: auto; }
+  nav a { color: var(--muted); white-space: nowrap; }
+  nav a:hover { color: var(--text); text-decoration: none; }
+  .top .sponsor-link { margin-left: auto; font-size: 14px; white-space: nowrap; }
+
+  .hero { padding-block: 4.5rem 3rem; display: grid; grid-template-columns: 1.1fr 1fr; gap: 3rem; align-items: center; }
+  .hero h1 { font-size: clamp(2.2rem, 5vw, 3.4rem); line-height: 1.08; letter-spacing: -0.02em; margin: 0 0 1rem; }
+  .hero p.lede { font-size: 1.2rem; color: var(--muted); margin: 0 0 1.75rem; }
+  .actions { display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center; }
+  .btn { display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.65rem 1.1rem; border-radius: 8px; font-weight: 600;
+    font-size: 15px; border: 1px solid var(--border); color: var(--text); background: var(--surface); }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-text); }
+  .btn:hover { text-decoration: none; filter: brightness(1.05); }
+  .meta { font-size: 13px; color: var(--muted); margin-top: 0.9rem; }
+  picture { display: block; }
+  .shot { width: fit-content; max-width: 100%; border-radius: 12px; border: 1px solid var(--border); background: var(--surface); overflow: hidden; }
+  .shot.bare { border: 0; background: none; }
+
+  section { padding: 3.5rem 0; border-top: 1px solid var(--border); }
+  section h2 { font-size: 1.9rem; letter-spacing: -0.01em; margin: 0 0 0.5rem; }
+  section > .wrap > p.sub { color: var(--muted); margin: 0 0 2rem; max-width: 46rem; }
+  h3 { font-size: 1.15rem; margin: 0 0 0.4rem; }
+
+  .modes { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.25rem; }
+  .mode { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 1.25rem; }
+  .mode .key { display: inline-block; font-size: 13px; font-weight: 600; color: var(--muted); margin-bottom: 0.4rem; }
+  kbd { font: 600 13px/1 -apple-system, sans-serif; border: 1px solid var(--border); border-bottom-width: 2px;
+    border-radius: 5px; padding: 0.15em 0.45em; background: var(--surface-2); color: var(--text); }
+  .mode p { margin: 0; color: var(--muted); font-size: 15px; }
+
+  .split { display: grid; grid-template-columns: 1fr 1fr; gap: 2.5rem; align-items: center; margin-bottom: 3rem; }
+  .split.flip > :first-child { order: 2; }
+  .split ul { padding-left: 1.2rem; color: var(--muted); }
+  .split li { margin: 0.3rem 0; }
+  .split li strong { color: var(--text); font-weight: 600; }
+  .pills { display: flex; flex-direction: column; gap: 1rem; align-items: flex-start; }
+  .pills img { max-width: 320px; }
+
+  .tabs { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 1rem; }
+  .tabs button { font: 600 14px/1 -apple-system, sans-serif; padding: 0.55rem 0.9rem; border-radius: 999px;
+    border: 1px solid var(--border); background: var(--surface); color: var(--text); cursor: pointer; }
+  .tabs button[aria-selected="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-text); }
+  .tabpanel figcaption { color: var(--muted); font-size: 15px; margin-top: 0.75rem; }
+  figure { margin: 0; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 15px; }
+  th, td { text-align: left; padding: 0.6rem 0.75rem; border-bottom: 1px solid var(--border); vertical-align: top; }
+  th { color: var(--muted); font-weight: 600; font-size: 13px; }
+  .table-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); }
+  .table-wrap tr:last-child td { border-bottom: 0; }
+
+  .steps { counter-reset: step; list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: minmax(0, 1fr); gap: 1rem; }
+  .steps li { counter-increment: step; background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+    padding: 1rem 1.25rem 1rem 3.25rem; position: relative; }
+  .steps li::before { content: counter(step); position: absolute; left: 1.1rem; top: 1rem; width: 1.5rem; height: 1.5rem;
+    border-radius: 50%; background: var(--accent); color: var(--accent-text); font: 700 13px/1.5rem -apple-system, sans-serif; text-align: center; }
+  .steps p { margin: 0.25rem 0 0; color: var(--muted); font-size: 15px; }
+
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 1.25rem; }
+  .card p, .card li { color: var(--muted); font-size: 15px; }
+  .card ul { padding-left: 1.1rem; margin: 0.5rem 0 0; }
+
+  .sponsor { text-align: center; }
+  .sponsor p { color: var(--muted); max-width: 38rem; margin: 0 auto 1.5rem; }
+  footer { border-top: 1px solid var(--border); padding: 2rem 0 3rem; color: var(--muted); font-size: 14px; }
+  footer .wrap { display: flex; flex-wrap: wrap; gap: 1rem 2rem; justify-content: space-between; }
+
+  @media (max-width: 860px) {
+    .hero, .split, .grid2 { grid-template-columns: 1fr; }
+    .split.flip > :first-child { order: 0; }
+    .modes { grid-template-columns: 1fr; }
+    nav { display: none; }
+    .hero { padding-block-start: 2.5rem; }
+  }
+</style>
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<header class="top">
+  <div class="wrap">
+    <a class="brand" href="#"><img src="icon.png" alt="">Paluku</a>
+    <nav aria-label="Sections">
+      <a href="#modes">Modes</a><a href="#agent">Agent</a><a href="#models">Models</a><a href="#tour">Tour</a>
+      <a href="#install">Install</a><a href="#privacy">Privacy</a><a href="#develop">Develop</a>
+    </nav>
+    <a class="sponsor-link" href="https://github.com/sponsors/gvsrusa">♥ Sponsor</a>
+  </div>
+</header>
+
+<main id="main">
+<div class="wrap hero">
+  <div>
+    <h1>Talk to your Mac.<br>It stays on your Mac.</h1>
+    <p class="lede">Paluku types what you say, rewrites what you select, and gets things done in your apps. It uses free, open-source models that run locally. No account, no subscription, no audio leaves your computer.</p>
+    <div class="actions">
+      <a class="btn primary" href="https://github.com/gvsrusa/paluku/releases/latest/download/Paluku.dmg" download>Download for macOS</a>
+      <a class="btn" href="#install">Homebrew</a>
+      <a class="btn" href="https://github.com/gvsrusa/paluku">Source on GitHub</a>
+    </div>
+    <p class="meta"><span id="latest-version">Latest release</span> · macOS 15+ · Apple Silicon · MIT licensed · <a href="https://github.com/gvsrusa/paluku/releases">All releases</a></p>
+  </div>
+  <picture class="shot bare">
+    <source srcset="screenshots/agent-confirm.png" media="(prefers-color-scheme: dark)">
+    <img src="screenshots/agent-confirm-light.png" width="476" height="426"
+      alt="The Paluku agent panel answering 'What's on my calendar tomorrow?' with a calendar card, and asking for confirmation before creating a reminder.">
+  </picture>
+</div>
+
+<section id="modes">
+  <div class="wrap">
+    <h2>Three modes, two keys</h2>
+    <p class="sub">Hold a key, speak, let go. Double-tap for hands-free; tap again to stop. <kbd>Esc</kbd> cancels at any point, including while the text is still being written.</p>
+    <div class="modes">
+      <div class="mode">
+        <span class="key">Hold <kbd>fn</kbd></span>
+        <h3>Dictation</h3>
+        <p>Clean text appears where your cursor is. Filler words and false starts are dropped, and “no wait, make that Tuesday” is applied for you.</p>
+      </div>
+      <div class="mode">
+        <span class="key">Select text, hold <kbd>fn</kbd></span>
+        <h3>Edit</h3>
+        <p>Say “make this shorter” or “translate to Spanish”. The selection is rewritten in place, in any app.</p>
+      </div>
+      <div class="mode">
+        <span class="key">Hold <kbd>Right ⌥</kbd></span>
+        <h3>Agent</h3>
+        <p>Ask a question or give an instruction. It answers out loud and acts in your apps. Point with the mouse to ask about what's on screen.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap split">
+    <div>
+      <h2>A pill, not a window</h2>
+      <p class="sub">While you talk, a small pill shows the live level and a timer. When you let go it shows “Writing…” until the text lands. Nothing else gets in your way.</p>
+      <ul>
+        <li><strong>Hands-free</strong> recording for long thoughts (capped at 20 minutes).</li>
+        <li><strong>Media ducking:</strong> music lowers while you speak.</li>
+        <li><strong>Your words are never lost:</strong> if the model is slow or down, you get the raw transcript.</li>
+      </ul>
+    </div>
+    <div class="pills">
+      <picture class="shot bare"><source srcset="screenshots/pill-recording.png" media="(prefers-color-scheme: dark)">
+        <img src="screenshots/pill-recording-light.png" width="313" height="60" alt="Recording pill: red dot, level meter, 'Hands-free · tap to stop', 0:12."></picture>
+      <picture class="shot bare"><source srcset="screenshots/pill-writing.png" media="(prefers-color-scheme: dark)">
+        <img src="screenshots/pill-writing-light.png" width="125" height="52" alt="Pill showing that Paluku is writing the text."></picture>
+    </div>
+  </div>
+</section>
+
+<section id="agent">
+  <div class="wrap">
+    <h2>An agent that asks before it acts</h2>
+    <p class="sub">Calendar, Reminders, Finder, Notes, Mail, Messages, Music and Spotify, Maps, web search and weather, scheduled tasks, Claude Code and Codex, and any MCP server (Gmail, Google Calendar, Drive, Notion…).</p>
+    <div class="split">
+      <picture class="shot bare"><source srcset="screenshots/agent-files.png" media="(prefers-color-scheme: dark)">
+        <img src="screenshots/agent-files-light.png" width="476" height="217" alt="Agent answer with a Files card listing two matching spreadsheets."></picture>
+      <div>
+        <h3>Results you can click</h3>
+        <ul>
+          <li><strong>Cards</strong> for files, events, mail and places. Click to open, drag to drop into another app.</li>
+          <li><strong>Switch model</strong> from the chip at the top of the panel.</li>
+          <li><strong>Spoken replies</strong> with the system voice you pick; start talking to interrupt.</li>
+        </ul>
+      </div>
+    </div>
+    <div class="split flip">
+      <picture class="shot bare"><source srcset="screenshots/agent-draft.png" media="(prefers-color-scheme: dark)">
+        <img src="screenshots/agent-draft-light.png" width="476" height="226" alt="Agent drafted a reply with Copy, Insert + Return and Insert buttons."></picture>
+      <div>
+        <h3>Drafts go where you are</h3>
+        <ul>
+          <li>“Reply saying Thursday at 3 works” writes a draft for the app in front of you.</li>
+          <li><strong>Insert</strong> types it at your cursor, <strong>Insert + ↩</strong> also presses Return, <strong>Copy</strong> puts it on the clipboard. Nothing is sent until you choose.</li>
+          <li>Anything that sends, creates, moves or deletes shows a confirmation card first. Say “yes” or click.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="models">
+  <div class="wrap">
+    <h2>Pick any open model, switch any time</h2>
+    <p class="sub">Choose separate models for the agent and for dictation. Switching applies to the next request, with no restart. Download models with a progress bar, or point Paluku at another local runtime.</p>
+    <picture class="shot"><source srcset="screenshots/main-models.png" media="(prefers-color-scheme: dark)">
+      <img src="screenshots/main-models-light.png" width="960" height="680" loading="lazy"
+        alt="Models tab: runtime Ollama with URL, agent and dictation model pickers, installed models with Use and delete, and a download in progress."></picture>
+    <div class="table-wrap" style="margin-top:1.5rem">
+      <table>
+        <thead><tr><th scope="col">Runtime</th><th scope="col">Base URL</th><th scope="col">Notes</th></tr></thead>
+        <tbody>
+          <tr><td>Ollama (default)</td><td><code>http://127.0.0.1:11434</code></td><td>Download and delete models from the Models tab.</td></tr>
+          <tr><td>LM Studio</td><td><code>http://127.0.0.1:1234/v1</code></td><td>OpenAI-compatible; tools and images supported.</td></tr>
+          <tr><td>llama.cpp <code>llama-server</code></td><td><code>http://127.0.0.1:8080/v1</code></td><td>Start with <code>--jinja</code> for tool calling.</td></tr>
+          <tr><td>MLX-LM</td><td><code>http://127.0.0.1:8080/v1</code></td><td>Fast on Apple Silicon.</td></tr>
+          <tr><td>Jan · vLLM</td><td><code>http://127.0.0.1:1337/v1</code> · your server</td><td>Optional API key, stored in the Keychain.</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="meta">Recommended: <code>gemma4</code> (vision + tools, 16 GB+), <code>qwen3:30b-a3b</code> for the agent, <code>qwen3:4b</code> for fast dictation on 8 GB Macs. See <a href="https://github.com/gvsrusa/paluku/blob/main/docs/MODELS.md">docs/MODELS.md</a>.</p>
+  </div>
+</section>
+
+<section id="tour">
+  <div class="wrap">
+    <h2>Every screen</h2>
+    <p class="sub">The settings window, tab by tab. Screenshots follow your light or dark appearance.</p>
+    <div class="tabs" role="tablist" aria-label="Settings screens"></div>
+    <div id="tour-panels"></div>
+  </div>
+</section>
+
+<section id="install">
+  <div class="wrap">
+    <h2>Install</h2>
+    <p class="sub">About five minutes, most of it downloading a model.</p>
+    <ol class="steps">
+      <li><strong>Install Ollama</strong> and a model.
+        <p>Download from <a href="https://ollama.com/download">ollama.com</a>, then run <code>ollama pull gemma4</code> (or <code>qwen3:4b</code> on an 8 GB Mac).</p></li>
+      <li><strong>Install Paluku.</strong>
+        <p>Download <a href="https://github.com/gvsrusa/paluku/releases/latest/download/Paluku.dmg">the latest DMG</a> and drag Paluku to Applications, or use Homebrew:</p>
+        <pre><code>brew tap gvsrusa/paluku https://github.com/gvsrusa/paluku
+brew install --cask paluku</code></pre>
+        <p>If macOS says <strong>“Paluku” Not Opened</strong>, click Done, then <a href="open-anyway.html">open Privacy &amp; Security</a> and click <strong>Open Anyway</strong> (the DMG has a link that does this too). Or run <code>xattr -dr com.apple.quarantine /Applications/Paluku.app</code>.</p></li>
+      <li><strong>Grant permissions</strong> in the Setup tab.
+        <p>Microphone, Accessibility (to type), Screen Recording (only for “what's on my screen”), Calendars, Reminders and Contacts. The speech model (~630 MB) downloads on first launch.</p></li>
+      <li><strong>Free up the fn key.</strong>
+        <p>System Settings › Keyboard › “Press 🌐 key to” → <strong>Do Nothing</strong>, so holding fn doesn't open the emoji picker.</p></li>
+    </ol>
+    <p class="meta">Verify a download: <code>shasum -a 256 -c Paluku-x.y.z.dmg.sha256</code>. Updates: Paluku checks daily (can be turned off) and installs a new version from the menu with one click, after verifying its checksum and signature. Homebrew users can also run <code>brew upgrade --cask paluku</code>.</p>
+  </div>
+</section>
+
+<section id="privacy">
+  <div class="wrap">
+    <h2>Privacy and safety</h2>
+    <p class="sub">Local by default, careful by design. The full threat model is in <a href="https://github.com/gvsrusa/paluku/blob/main/docs/SECURITY.md">docs/SECURITY.md</a>.</p>
+    <div class="grid2">
+      <div class="card"><h3>What stays on your Mac</h3>
+        <ul>
+          <li>Speech-to-text runs in WhisperKit on the Neural Engine. Audio is never stored.</li>
+          <li>The language model runs in Ollama or your own runtime.</li>
+          <li>History, dictionary and memory are JSON files in <code>~/Library/Application Support/Paluku</code>; secrets live in the Keychain.</li>
+          <li>Logs contain event names and timings, never what you said.</li>
+        </ul></div>
+      <div class="card"><h3>What the agent can't do on its own</h3>
+        <ul>
+          <li>Send, create, move or delete without a confirmation card.</li>
+          <li>Send data out after reading a web page, email or your screen, unless you approve it.</li>
+          <li>Open links to other apps, local-network addresses or executables.</li>
+          <li>Read Library, hidden or system files. Memories picked up from outside content stay flagged until you trust them.</li>
+        </ul></div>
+    </div>
+    <div class="split" style="margin-top:2rem">
+      <picture class="shot"><source srcset="screenshots/main-memory-schedule.png" media="(prefers-color-scheme: dark)">
+        <img src="screenshots/main-memory-schedule-light.png" width="960" height="680" loading="lazy"
+          alt="Memory and Schedule tab: remembered facts, one flagged with an orange shield and a Trust button, and scheduled tasks."></picture>
+      <div><h3>You stay in charge of memory</h3>
+        <ul>
+          <li><strong>Lock</strong> facts so the agent can't remove them.</li>
+          <li><strong>Trust</strong> a flagged fact once you've checked it wasn't planted by a web page or email.</li>
+          <li><strong>Scheduled tasks</strong> run later with the same rules and need a click to approve.</li>
+        </ul></div>
+    </div>
+  </div>
+</section>
+
+<section id="develop">
+  <div class="wrap">
+    <h2>Build it yourself</h2>
+    <p class="sub">Swift 6 toolchain, SwiftUI + AppKit, two dependencies (WhisperKit, MCP Swift SDK). All logic lives in a unit-tested Swift package; the app is a thin shell.</p>
+    <pre><code>brew install xcodegen
+git clone https://github.com/gvsrusa/paluku && cd paluku
+scripts/build.sh Debug
+open build/dd/Build/Products/Debug/Paluku.app</code></pre>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th scope="col">Command</th><th scope="col">What it does</th></tr></thead>
+        <tbody>
+          <tr><td><code>scripts/lint.sh</code></td><td>swift-format check</td></tr>
+          <tr><td><code>scripts/test.sh</code></td><td>Unit tests, including security abuse cases (no network)</td></tr>
+          <tr><td><code>PALUKU_LIVE=1 PALUKU_PERF=1 swift test --package-path Packages/PalukuCore --filter Perf</code></td><td>Latency budgets against a real model</td></tr>
+          <tr><td><code>scripts/screenshots.sh</code></td><td>Regenerate every screenshot on this page (demo data, dark + light)</td></tr>
+          <tr><td><code>scripts/package.sh</code></td><td>Signed, notarized DMG when Apple credentials are set</td></tr>
+          <tr><td><code>scripts/release.sh 1.3.0 --push</code></td><td>Bump, stamp the changelog, tag; CI builds and publishes</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="grid2" style="margin-top:1.5rem">
+      <div class="card"><h3>CI/CD</h3>
+        <p>Every push runs lint, tests, an app build and UI snapshots on GitHub Actions. A <code>v*</code> tag builds a Release, signs and notarizes it when secrets are present, publishes the DMG with a SHA-256, and updates the Homebrew cask. See <a href="https://github.com/gvsrusa/paluku/blob/main/docs/RELEASING.md">RELEASING.md</a>.</p></div>
+      <div class="card"><h3>Docs</h3>
+        <ul>
+          <li><a href="https://github.com/gvsrusa/paluku/blob/main/docs/ARCHITECTURE.md">Architecture</a> · <a href="https://github.com/gvsrusa/paluku/tree/main/docs/decisions">Decision records</a></li>
+          <li><a href="https://github.com/gvsrusa/paluku/blob/main/SPEC.md">Spec</a> · <a href="https://github.com/gvsrusa/paluku/blob/main/CHANGELOG.md">Changelog</a></li>
+          <li><a href="https://github.com/gvsrusa/paluku/blob/main/docs/PRIVACY.md">Privacy</a> · <a href="https://github.com/gvsrusa/paluku/blob/main/docs/manual-qa.md">Manual QA</a></li>
+          <li><a href="https://github.com/gvsrusa/paluku/blob/main/CONTRIBUTING.md">Contributing</a></li>
+        </ul></div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <h2>Why not the Mac App Store?</h2>
+    <p class="sub">The App Store requires the App Sandbox, which forbids typing into other apps, global key monitoring, AppleScript control of Mail and Messages, and launching MCP servers. That is everything Paluku does, so it ships as a signed DMG and a Homebrew cask instead (<a href="https://github.com/gvsrusa/paluku/blob/main/docs/decisions/0001-distribute-as-notarized-dmg-not-mac-app-store.md">ADR-0001</a>).</p>
+  </div>
+</section>
+
+<section class="sponsor" id="sponsor">
+  <div class="wrap">
+    <h2>Support Paluku</h2>
+    <p>Paluku is free and open source. If it saves you typing, sponsoring helps pay for the Apple Developer ID that lets releases open without warnings, and for time spent on new integrations.</p>
+    <div class="actions" style="justify-content:center">
+      <a class="btn primary" href="https://github.com/sponsors/gvsrusa">♥ Sponsor on GitHub</a>
+      <a class="btn" href="https://github.com/gvsrusa/paluku">★ Star the repo</a>
+    </div>
+  </div>
+</section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <span>Paluku · MIT License · Made by <a href="https://github.com/gvsrusa">@gvsrusa</a></span>
+    <span>Open source · runs on your Mac · no account needed</span>
+  </div>
+</footer>
+
+<script>
+  // Show the version the Download button will fetch (best effort; the button works without it).
+  fetch("https://api.github.com/repos/gvsrusa/paluku/releases/latest")
+    .then(r => r.ok ? r.json() : null)
+    .then(r => { if (r && r.tag_name) document.getElementById("latest-version").textContent = "Version " + r.tag_name.replace(/^v/, ""); })
+    .catch(() => {});
+
+  // Settings tour: one tab button per screen; arrow keys move between tabs (WAI-ARIA tabs pattern).
+  const screens = [
+    ["history", "History", "Every dictation, edit and agent request with the original transcript, plus words dictated and time saved."],
+    ["general", "General", "Trigger keys, polish style, language, speech model, voice replies and launch at login."],
+    ["models", "Models", "Runtime, agent and dictation models, downloads with progress, and a curated list of open models."],
+    ["dictionary", "Dictionary", "Names and jargon Paluku should spell right, with the ways they tend to be misheard."],
+    ["integrations", "Integrations", "Apple apps and MCP servers such as Google Workspace and Notion, with per-integration confirmation settings."],
+    ["memory-schedule", "Memory & Schedule", "Facts the agent always knows, and reminders or agent tasks scheduled for later."],
+    ["setup", "Setup", "Each macOS permission Paluku uses, its status, and a Grant button. Automation prompts appear the first time the agent uses an app."],
+  ];
+  const list = document.querySelector(".tabs"), panels = document.getElementById("tour-panels");
+  screens.forEach(([id, label, caption], i) => {
+    const b = document.createElement("button");
+    b.role = "tab"; b.id = "tab-" + id; b.textContent = label;
+    b.setAttribute("aria-controls", "panel-" + id); b.setAttribute("aria-selected", i === 0); b.tabIndex = i === 0 ? 0 : -1;
+    list.append(b);
+    const p = document.createElement("figure");
+    p.className = "tabpanel"; p.id = "panel-" + id; p.role = "tabpanel"; p.hidden = i !== 0;
+    p.setAttribute("aria-labelledby", b.id);
+    p.innerHTML = `<picture class="shot"><source srcset="screenshots/main-${id}.png" media="(prefers-color-scheme: dark)">
+      <img src="screenshots/main-${id}-light.png" width="960" height="680" alt="${label} tab of the Paluku settings window."></picture>
+      <figcaption>${caption}</figcaption>`;
+    panels.append(p);
+  });
+  const tabs = [...list.children];
+  function select(t) {
+    tabs.forEach(x => { const on = x === t; x.setAttribute("aria-selected", on); x.tabIndex = on ? 0 : -1;
+      document.getElementById(x.getAttribute("aria-controls")).hidden = !on; });
+    t.focus();
+  }
+  list.addEventListener("click", e => e.target.role === "tab" && select(e.target));
+  list.addEventListener("keydown", e => {
+    const i = tabs.indexOf(document.activeElement), d = { ArrowRight: 1, ArrowLeft: -1 }[e.key];
+    if (i >= 0 && d) { e.preventDefault(); select(tabs[(i + d + tabs.length) % tabs.length]); }
+  });
+</script>
+</body>
+</html>

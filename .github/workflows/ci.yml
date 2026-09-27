@@ -1,0 +1,58 @@
+# Quality gates on every push/PR: format lint → unit tests → app build → UI snapshots.
+# All logic lives in scripts/ so it runs identically on a laptop.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  test-and-build:
+    runs-on: macos-26
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Select newest Xcode
+        uses: maxim-lobanov/setup-xcode@ed7a3b1fda3918c0306d1b724322adc0b8cc0a90 # v1.7.0
+        with:
+          xcode-version: latest-stable
+
+      - name: Toolchain info
+        run: xcodebuild -version && swift --version
+
+      - name: Cache SwiftPM
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            Packages/PalukuCore/.build
+            build/dd/SourcePackages
+          # Repo name in the key: .build caches absolute paths, so a renamed repo must not restore the old one.
+          key: spm-${{ runner.os }}-${{ github.event.repository.name }}-${{ hashFiles('Packages/PalukuCore/Package.resolved', 'Packages/PalukuCore/Package.swift') }}
+
+      - name: Lint (swift-format)
+        run: scripts/lint.sh
+
+      - name: Unit tests
+        run: scripts/test.sh
+
+      - name: Build app (Debug)
+        run: scripts/build.sh Debug
+
+      - name: Render UI snapshots
+        run: build/dd/Build/Products/Debug/Paluku.app/Contents/MacOS/Paluku --snapshot "$RUNNER_TEMP/snapshots"
+
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: ui-snapshots
+          path: ${{ runner.temp }}/snapshots
+          retention-days: 14
